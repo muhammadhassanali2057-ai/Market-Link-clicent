@@ -4,7 +4,7 @@ import axios from "axios";
 // /api to the Express backend, and the same relative path works
 // unchanged once built and served behind any reverse proxy in prod.
 const api = axios.create({
-  baseURL: "https://market-link-backend-roan.vercel.app/api",
+  baseURL: "https://market-link-backend-production.up.railway.app/api",
   withCredentials: true, // send the httpOnly auth cookie
   timeout: 15000, // 15s timeout safety fallback
   headers: {
