@@ -40,66 +40,75 @@ export default function FarmerProducts() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // -----------------------------------------
+  // ==========================================
   // LOAD PRODUCTS
-  // -----------------------------------------
-  function loadProducts() {
-    setError(null);
+  // ==========================================
 
-    api
-      .get("/products/mine")
-      .then((res) => {
-        setProducts(res.data.products || []);
-      })
-      .catch((err) => {
-        console.error("Products loading error:", err);
-        setError("Could not load your products.");
-        setProducts([]);
-      });
+  async function loadProducts() {
+    try {
+      setError(null);
+
+      const res = await api.get("/products/mine");
+
+      setProducts(res.data.products || []);
+    } catch (err) {
+      console.error("Products loading error:", err);
+
+      setError("Could not load your products.");
+      setProducts([]);
+    }
   }
 
-  // -----------------------------------------
-  // LOAD CATEGORIES + MARKETS
-  // -----------------------------------------
-  function loadCategoriesAndMarkets() {
-    // Load Categories
-    api
-      .get("/categories")
-      .then((res) => {
-        console.log("Categories API:", res.data);
+  // ==========================================
+  // LOAD CATEGORIES
+  // ==========================================
 
-        setCategories(res.data.categories || []);
-      })
-      .catch((err) => {
-        console.error("Categories loading error:", err);
-        setCategories([]);
-      });
+  async function loadCategories() {
+    try {
+      const res = await api.get("/categories");
 
-    // Load ALL Markets
-    api
-      .get("/markets")
-      .then((res) => {
-        console.log("Markets API:", res.data);
+      console.log("Categories API:", res.data);
 
-        setMarkets(res.data.markets || []);
-      })
-      .catch((err) => {
-        console.error("Markets loading error:", err);
-        setMarkets([]);
-      });
+      setCategories(res.data.categories || []);
+    } catch (err) {
+      console.error("Categories loading error:", err);
+
+      setCategories([]);
+    }
   }
 
-  // -----------------------------------------
+  // ==========================================
+  // LOAD MARKETS
+  // ==========================================
+
+  async function loadMarkets() {
+    try {
+      const res = await api.get("/markets");
+
+      console.log("Markets API:", res.data);
+
+      setMarkets(res.data.markets || []);
+    } catch (err) {
+      console.error("Markets loading error:", err);
+
+      setMarkets([]);
+    }
+  }
+
+  // ==========================================
   // INITIAL LOAD
-  // -----------------------------------------
+  // ==========================================
+
   useEffect(() => {
     loadProducts();
-    loadCategoriesAndMarkets();
+    loadCategories();
+    loadMarkets();
   }, []);
 
-  // -----------------------------------------
-  // HANDLE FORM CHANGE
-  // -----------------------------------------
+  // ==========================================
+  // FORM CHANGE
+  // ==========================================
+
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
 
@@ -109,17 +118,19 @@ export default function FarmerProducts() {
     }));
   }
 
-  // -----------------------------------------
-  // OPEN NEW PRODUCT FORM
-  // -----------------------------------------
+  // ==========================================
+  // ADD PRODUCT
+  // ==========================================
+
   function openNew() {
     setEditing("new");
-    setForm(emptyForm);
+    setForm({ ...emptyForm });
   }
 
-  // -----------------------------------------
-  // OPEN EDIT PRODUCT FORM
-  // -----------------------------------------
+  // ==========================================
+  // EDIT PRODUCT
+  // ==========================================
+
   function openEdit(product) {
     setEditing(product._id);
 
@@ -129,30 +140,37 @@ export default function FarmerProducts() {
       price: product.price ?? "",
       unit: product.unit || "kg",
       quantityAvailable: product.quantityAvailable ?? "",
+
       category:
         product.category?._id ||
         product.category ||
         "",
+
       market:
         product.market?._id ||
         product.market ||
         "",
+
       imageUrl: product.imageUrl || "",
-      isWeeklyTemplate: product.isWeeklyTemplate || false,
+
+      isWeeklyTemplate:
+        product.isWeeklyTemplate || false,
     });
   }
 
-  // -----------------------------------------
+  // ==========================================
   // CLOSE FORM
-  // -----------------------------------------
+  // ==========================================
+
   function closeForm() {
     setEditing(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm });
   }
 
-  // -----------------------------------------
+  // ==========================================
   // IMAGE UPLOAD
-  // -----------------------------------------
+  // ==========================================
+
   async function handleUpload(e) {
     const file = e.target.files?.[0];
 
@@ -162,13 +180,18 @@ export default function FarmerProducts() {
 
     try {
       const formData = new FormData();
+
       formData.append("image", file);
 
-      const res = await api.post("/uploads/image", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const res = await api.post(
+        "/uploads/image",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       const imageUrl =
         res.data.url ||
@@ -192,15 +215,15 @@ export default function FarmerProducts() {
     }
   }
 
-  // -----------------------------------------
+  // ==========================================
   // SAVE PRODUCT
-  // -----------------------------------------
+  // ==========================================
+
   async function save(e) {
     e.preventDefault();
 
-    // Basic validation
     if (
-      !form.name ||
+      !form.name.trim() ||
       !form.price ||
       !form.unit ||
       !form.category ||
@@ -209,6 +232,7 @@ export default function FarmerProducts() {
       alert(
         "Name, price, unit, category and market are required."
       );
+
       return;
     }
 
@@ -217,17 +241,26 @@ export default function FarmerProducts() {
     try {
       const payload = {
         name: form.name.trim(),
+
         description: form.description.trim(),
+
         price: Number(form.price),
+
         unit: form.unit,
+
         quantityAvailable:
           form.quantityAvailable === ""
             ? 0
             : Number(form.quantityAvailable),
+
         category: form.category,
+
         market: form.market,
+
         imageUrl: form.imageUrl,
-        isWeeklyTemplate: Boolean(form.isWeeklyTemplate),
+
+        isWeeklyTemplate:
+          Boolean(form.isWeeklyTemplate),
       };
 
       console.log("Saving product:", payload);
@@ -248,7 +281,8 @@ export default function FarmerProducts() {
       );
 
       closeForm();
-      loadProducts();
+
+      await loadProducts();
     } catch (err) {
       console.error("Product save error:", err);
 
@@ -261,9 +295,10 @@ export default function FarmerProducts() {
     }
   }
 
-  // -----------------------------------------
+  // ==========================================
   // DELETE PRODUCT
-  // -----------------------------------------
+  // ==========================================
+
   async function removeProduct(id) {
     const confirmed = window.confirm(
       "Are you sure you want to delete this product?"
@@ -276,7 +311,7 @@ export default function FarmerProducts() {
 
       alert("Product deleted successfully.");
 
-      loadProducts();
+      await loadProducts();
     } catch (err) {
       console.error("Delete product error:", err);
 
@@ -287,9 +322,10 @@ export default function FarmerProducts() {
     }
   }
 
-  // -----------------------------------------
-  // LOADING STATE
-  // -----------------------------------------
+  // ==========================================
+  // LOADING
+  // ==========================================
+
   if (products === null) {
     return (
       <div className="flex items-center justify-center min-h-[300px]">
@@ -300,19 +336,23 @@ export default function FarmerProducts() {
     );
   }
 
-  // -----------------------------------------
-  // ERROR STATE
-  // -----------------------------------------
+  // ==========================================
+  // ERROR
+  // ==========================================
+
   if (error) {
     return <ErrorState message={error} />;
   }
 
   return (
     <div className="space-y-6">
-      {/* -------------------------------- */}
+
+      {/* ====================================== */}
       {/* HEADER */}
-      {/* -------------------------------- */}
+      {/* ====================================== */}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             My Products
@@ -342,18 +382,24 @@ export default function FarmerProducts() {
           "
         >
           <Plus size={20} />
+
           Add Product
         </button>
       </div>
 
-      {/* -------------------------------- */}
-      {/* PRODUCT FORM */}
-      {/* -------------------------------- */}
+      {/* ====================================== */}
+      {/* FORM */}
+      {/* ====================================== */}
+
       {editing !== null && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+
           {/* FORM HEADER */}
+
           <div className="flex items-center justify-between mb-6">
+
             <div className="flex items-center gap-3">
+
               <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
                 <Package
                   size={20}
@@ -372,6 +418,7 @@ export default function FarmerProducts() {
                   Add product information below.
                 </p>
               </div>
+
             </div>
 
             <button
@@ -391,14 +438,20 @@ export default function FarmerProducts() {
             >
               <X size={20} />
             </button>
+
           </div>
+
+          {/* FORM */}
 
           <form
             onSubmit={save}
             className="space-y-5"
           >
+
             {/* NAME + PRICE */}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Product Name *
@@ -451,10 +504,13 @@ export default function FarmerProducts() {
                   "
                 />
               </div>
+
             </div>
 
             {/* UNIT + QUANTITY */}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Unit *
@@ -477,12 +533,29 @@ export default function FarmerProducts() {
                     focus:ring-emerald-500
                   "
                 >
-                  <option value="kg">Kilogram (kg)</option>
-                  <option value="g">Gram (g)</option>
-                  <option value="piece">Piece</option>
-                  <option value="dozen">Dozen</option>
-                  <option value="liter">Liter</option>
-                  <option value="pack">Pack</option>
+                  <option value="kg">
+                    Kilogram (kg)
+                  </option>
+
+                  <option value="g">
+                    Gram (g)
+                  </option>
+
+                  <option value="piece">
+                    Piece
+                  </option>
+
+                  <option value="dozen">
+                    Dozen
+                  </option>
+
+                  <option value="liter">
+                    Liter
+                  </option>
+
+                  <option value="pack">
+                    Pack
+                  </option>
                 </select>
               </div>
 
@@ -512,11 +585,15 @@ export default function FarmerProducts() {
                   "
                 />
               </div>
+
             </div>
 
             {/* CATEGORY + MARKET */}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
               {/* CATEGORY */}
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Category *
@@ -539,6 +616,7 @@ export default function FarmerProducts() {
                     focus:ring-emerald-500
                   "
                 >
+
                   <option value="">
                     Select category
                   </option>
@@ -551,6 +629,7 @@ export default function FarmerProducts() {
                       {category.name}
                     </option>
                   ))}
+
                 </select>
 
                 {categories.length === 0 && (
@@ -561,6 +640,7 @@ export default function FarmerProducts() {
               </div>
 
               {/* MARKET */}
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Market *
@@ -583,6 +663,7 @@ export default function FarmerProducts() {
                     focus:ring-emerald-500
                   "
                 >
+
                   <option value="">
                     Select market
                   </option>
@@ -595,6 +676,7 @@ export default function FarmerProducts() {
                       {market.name}
                     </option>
                   ))}
+
                 </select>
 
                 {markets.length === 0 && (
@@ -602,11 +684,15 @@ export default function FarmerProducts() {
                     No markets available.
                   </p>
                 )}
+
               </div>
+
             </div>
 
             {/* DESCRIPTION */}
+
             <div>
+
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Description
               </label>
@@ -631,15 +717,19 @@ export default function FarmerProducts() {
                   focus:border-emerald-500
                 "
               />
+
             </div>
 
             {/* IMAGE */}
+
             <div>
+
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Product Image
               </label>
 
               <div className="flex flex-col sm:flex-row gap-4">
+
                 <label
                   className="
                     inline-flex
@@ -656,6 +746,7 @@ export default function FarmerProducts() {
                     transition
                   "
                 >
+
                   <Upload size={19} />
 
                   {uploading
@@ -668,22 +759,29 @@ export default function FarmerProducts() {
                     onChange={handleUpload}
                     className="hidden"
                   />
+
                 </label>
 
                 {form.imageUrl && (
                   <div className="w-24 h-24 rounded-xl overflow-hidden border border-gray-200">
+
                     <img
                       src={form.imageUrl}
                       alt={form.name || "Product"}
                       className="w-full h-full object-cover"
                     />
+
                   </div>
                 )}
+
               </div>
+
             </div>
 
             {/* WEEKLY TEMPLATE */}
+
             <label className="flex items-center gap-3 cursor-pointer">
+
               <input
                 type="checkbox"
                 name="isWeeklyTemplate"
@@ -695,10 +793,13 @@ export default function FarmerProducts() {
               <span className="text-sm text-gray-700">
                 Use as weekly product template
               </span>
+
             </label>
 
             {/* BUTTONS */}
+
             <div className="flex flex-col sm:flex-row gap-3 pt-3">
+
               <button
                 type="submit"
                 disabled={saving || uploading}
@@ -739,22 +840,31 @@ export default function FarmerProducts() {
               >
                 Cancel
               </button>
+
             </div>
+
           </form>
+
         </div>
       )}
 
-      {/* -------------------------------- */}
-      {/* PRODUCTS LIST */}
-      {/* -------------------------------- */}
+      {/* ====================================== */}
+      {/* PRODUCTS */}
+      {/* ====================================== */}
+
       {products.length === 0 ? (
+
         <EmptyState
           title="No products yet"
           message="Add your first product to start selling."
         />
+
       ) : (
+
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+
           {products.map((product) => (
+
             <div
               key={product._id}
               className="
@@ -768,28 +878,42 @@ export default function FarmerProducts() {
                 transition
               "
             >
+
               {/* IMAGE */}
+
               <div className="h-48 bg-gray-100">
+
                 {product.imageUrl ? (
+
                   <img
                     src={product.imageUrl}
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
+
                 ) : (
+
                   <div className="w-full h-full flex items-center justify-center">
+
                     <Package
                       size={45}
                       className="text-gray-400"
                     />
+
                   </div>
+
                 )}
+
               </div>
 
               {/* CONTENT */}
+
               <div className="p-5">
+
                 <div className="flex items-start justify-between gap-3">
+
                   <div>
+
                     <h3 className="font-bold text-lg text-gray-900">
                       {product.name}
                     </h3>
@@ -798,6 +922,7 @@ export default function FarmerProducts() {
                       {product.category?.name ||
                         "Uncategorized"}
                     </p>
+
                   </div>
 
                   {product.status && (
@@ -805,9 +930,11 @@ export default function FarmerProducts() {
                       status={product.status}
                     />
                   )}
+
                 </div>
 
                 <div className="mt-4">
+
                   <span className="text-xl font-bold text-emerald-600">
                     Rs. {product.price}
                   </span>
@@ -815,25 +942,32 @@ export default function FarmerProducts() {
                   <span className="text-sm text-gray-500 ml-1">
                     / {product.unit}
                   </span>
+
                 </div>
 
                 {product.quantityAvailable !==
                   undefined && (
+
                   <p className="text-sm text-gray-600 mt-2">
                     Available:{" "}
                     {product.quantityAvailable}{" "}
                     {product.unit}
                   </p>
+
                 )}
 
                 {product.market?.name && (
+
                   <p className="text-sm text-gray-600 mt-1">
                     Market: {product.market.name}
                   </p>
+
                 )}
 
                 {/* ACTIONS */}
+
                 <div className="flex gap-2 mt-5">
+
                   <button
                     type="button"
                     onClick={() =>
@@ -855,8 +989,11 @@ export default function FarmerProducts() {
                       hover:bg-gray-50
                     "
                   >
+
                     <Pencil size={17} />
+
                     Edit
+
                   </button>
 
                   <button
@@ -877,14 +1014,23 @@ export default function FarmerProducts() {
                       hover:bg-red-50
                     "
                   >
+
                     <Trash2 size={17} />
+
                   </button>
+
                 </div>
+
               </div>
+
             </div>
+
           ))}
+
         </div>
+
       )}
+
     </div>
   );
 }
