@@ -4,6 +4,7 @@ import { Heart, MapPin, Eye, ShoppingBag } from "lucide-react";
 import StarRating from "./StarRating.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 import { getCategoryImage } from "../utils/imageAssets.js";
+import api from "../api/axios.js";
 
 export default function ProductCard({
   product,
@@ -15,17 +16,47 @@ export default function ProductCard({
   const glareRef = useRef(null);
   const rafId = useRef(null);
 
-  const imageSrc =
-    product?.imageUrl || getCategoryImage(product?.category?.name);
+  // Build the correct image URL
+  const getProductImageUrl = (imageUrl) => {
+    // No uploaded image → category fallback
+    if (!imageUrl) {
+      return getCategoryImage(product?.category?.name);
+    }
+
+    // Cloudinary or any other complete URL
+    if (
+      imageUrl.startsWith("http://") ||
+      imageUrl.startsWith("https://")
+    ) {
+      return imageUrl;
+    }
+
+    // Backend local upload such as:
+    // /uploads/12345-image.jpg
+    const baseURL = api.defaults.baseURL || "";
+
+    try {
+      return new URL(imageUrl, baseURL).toString();
+    } catch {
+      return imageUrl;
+    }
+  };
+
+  const imageSrc = getProductImageUrl(product?.imageUrl);
 
   // Smooth 3D tilt without triggering heavy React re-renders
   const handleMouseMove = (e) => {
-    if (!cardRef.current || window.matchMedia("(hover: none)").matches) return;
+    if (!cardRef.current || window.matchMedia("(hover: none)").matches) {
+      return;
+    }
 
-    if (rafId.current) cancelAnimationFrame(rafId.current);
+    if (rafId.current) {
+      cancelAnimationFrame(rafId.current);
+    }
 
     rafId.current = requestAnimationFrame(() => {
       const rect = cardRef.current.getBoundingClientRect();
+
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
@@ -37,23 +68,35 @@ export default function ProductCard({
 
       cardRef.current.style.transform = `perspective(1000px) rotateX(${rotateX.toFixed(
         2
-      )}deg) rotateY(${rotateY.toFixed(2)}deg) scale3d(1.02, 1.02, 1.02)`;
+      )}deg) rotateY(${rotateY.toFixed(
+        2
+      )}deg) scale3d(1.02, 1.02, 1.02)`;
 
       if (glareRef.current) {
         const glareX = (x / rect.width) * 100;
         const glareY = (y / rect.height) * 100;
-        glareRef.current.style.background = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(0,255,157,0.25) 0%, transparent 60%)`;
+
+        glareRef.current.style.background = `radial-gradient(
+          circle at ${glareX}% ${glareY}%,
+          rgba(0,255,157,0.25) 0%,
+          transparent 60%
+        )`;
+
         glareRef.current.style.opacity = "1";
       }
     });
   };
 
   const handleMouseLeave = () => {
-    if (rafId.current) cancelAnimationFrame(rafId.current);
+    if (rafId.current) {
+      cancelAnimationFrame(rafId.current);
+    }
+
     if (cardRef.current) {
       cardRef.current.style.transform =
         "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
     }
+
     if (glareRef.current) {
       glareRef.current.style.opacity = "0";
     }
@@ -90,9 +133,15 @@ export default function ProductCard({
             className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
             onError={(e) => {
               e.currentTarget.onerror = null;
-              e.currentTarget.src = getCategoryImage();
+
+              // Use category-specific fallback instead of
+              // the same generic image for every product
+              e.currentTarget.src = getCategoryImage(
+                product?.category?.name
+              );
             }}
           />
+
           <div className="absolute inset-0 bg-gradient-to-t from-forest-900/90 via-forest-900/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
 
           {/* Status Badge */}
@@ -104,7 +153,8 @@ export default function ProductCard({
 
           {/* Quick View Floating Pill */}
           <span className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300 bg-forest-900/80 border border-emerald-500/30 backdrop-blur-md px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 group-hover:translate-y-0 translate-y-2 transition-all duration-300 shadow-lg">
-            <Eye className="w-3.5 h-3.5" /> Quick View
+            <Eye className="w-3.5 h-3.5" />
+            Quick View
           </span>
         </Link>
 
@@ -143,8 +193,10 @@ export default function ProductCard({
           >
             {product?.name || "Unnamed Product"}
           </Link>
+
           <p className="text-xs text-sage-300/80 line-clamp-1">
             {product?.farmer?.stallName || "Local Stall"}
+
             {product?.market?.name && (
               <>
                 {" · "}
@@ -160,12 +212,18 @@ export default function ProductCard({
         <div className="space-y-3 pt-1">
           <div className="flex items-center justify-between">
             <div className="flex items-baseline gap-1">
-              <span className="text-xs text-emerald-400 font-medium">Rs.</span>
+              <span className="text-xs text-emerald-400 font-medium">
+                Rs.
+              </span>
+
               <span className="font-display font-extrabold text-xl text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-mint-300">
                 {product?.price ?? 0}
               </span>
+
               {product?.unit && (
-                <span className="text-xs text-sage-300">/{product.unit}</span>
+                <span className="text-xs text-sage-300">
+                  /{product.unit}
+                </span>
               )}
             </div>
 
@@ -195,7 +253,9 @@ export default function ProductCard({
         {product?.market?.address && (
           <p className="flex items-center gap-1.5 text-[11px] text-sage-300/70 pt-2 border-t border-white/10">
             <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span className="truncate">{product.market.address}</span>
+            <span className="truncate">
+              {product.market.address}
+            </span>
           </p>
         )}
       </div>
